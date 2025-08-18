@@ -7,7 +7,7 @@ from .models import CustomUser, Verification, Notification
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    icon_name = "person"  # иконка пользователя
+    icon_name = "person" 
     list_display = ("email", "phone", "first_name", "last_name", "is_active", "is_staff", "qr_thumb")
     ordering = ("email",)
     search_fields = ("email", "phone", "first_name", "last_name")
@@ -38,7 +38,7 @@ class CustomUserAdmin(UserAdmin):
 # 📌 Верификации
 @admin.register(Verification)
 class VerificationAdmin(admin.ModelAdmin):
-    icon_name = "verified"  # иконка для верификаций
+    icon_name = "verified" 
     list_display = ("user", "purpose", "code", "is_used", "created_at")
     search_fields = ("user__email", "code")
     list_filter = ("purpose", "is_used", "created_at")
@@ -47,7 +47,7 @@ class VerificationAdmin(admin.ModelAdmin):
 # 📌 Уведомления
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    icon_name = "notifications"  # иконка для уведомлений
+    icon_name = "notifications" 
     list_display = ('user', 'message', 'is_read', 'created_at')
     search_fields = ('user__phone', 'user__email', 'message')
     list_filter = ('is_read', 'created_at')
