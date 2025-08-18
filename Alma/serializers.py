@@ -46,13 +46,3 @@ class HurryBuySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# 🔔 Уведомления
-class NotificationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notification
-        fields = ['id', 'user', 'message', 'is_read', 'created_at']
-        read_only_fields = ['user', 'is_read', 'created_at']
-
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)

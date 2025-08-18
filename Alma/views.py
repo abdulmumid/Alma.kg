@@ -99,10 +99,3 @@ class HurryBuyViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
-# 🔔 Уведомления
-class NotificationViewSet(generics.ListAPIView):
-    serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)

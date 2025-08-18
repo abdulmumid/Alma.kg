@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils.text import slugify
-from django.conf import settings
 from django.contrib.gis.db import models as geomodels
 from ckeditor_uploader.fields import RichTextUploadingField
 from django.utils import timezone
@@ -110,17 +109,3 @@ class HurryBuy(models.Model):
         ordering = ["-start_date"]
 
 
-# 🔔 Уведомления
-class Notification(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    message = models.TextField("Сообщение")
-    is_read = models.BooleanField("Прочитано", default=False)
-    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
-
-    def __str__(self):
-        return f"Уведомление для {self.user} — {'✔' if self.is_read else '✖'}"
-
-    class Meta:
-        verbose_name = "Уведомление"
-        verbose_name_plural = "Уведомления"
-        ordering = ["-created_at"]

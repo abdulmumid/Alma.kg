@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils.crypto import get_random_string
 from django.contrib.auth import authenticate
-from .models import CustomUser, Verification
+from .models import CustomUser, Verification, Notification
 
 
 # Регистрация
@@ -140,3 +140,15 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = CustomUser
         fields = ["first_name", "last_name", "phone"]
+
+
+# 🔔 Уведомления
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'message', 'is_read', 'created_at']
+        read_only_fields = ['user', 'is_read', 'created_at']
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

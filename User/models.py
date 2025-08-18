@@ -8,6 +8,7 @@ from io import BytesIO
 from uuid import uuid4
 import qrcode
 from phonenumber_field.modelfields import PhoneNumberField
+from django.conf import settings
 
 
 # --- Менеджер пользователя ---
@@ -100,3 +101,19 @@ class Verification(models.Model):
         subj = _("Подтверждение регистрации") if self.purpose == self.Purpose.REGISTER else _("Восстановление пароля")
         msg  = _("Ваш код: %(code)s. Срок действия 24 часа.") % {"code": self.code}
         send_mail(subj, msg, None, [self.user.email])
+
+
+# 🔔 Уведомления
+class Notification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField("Сообщение")
+    is_read = models.BooleanField("Прочитано", default=False)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+
+    def __str__(self):
+        return f"Уведомление для {self.user} — {'✔' if self.is_read else '✖'}"
+
+    class Meta:
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
+        ordering = ["-created_at"]

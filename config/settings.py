@@ -3,30 +3,20 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 
-# Загружаем переменные окружения из файла .env
 load_dotenv()
 
-# Базовая директория
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Секретный ключ (лучше хранить в .env)
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-38!s$7g@0o!2zxt1r9q1^e4b@r-9fxt9%=g+9v5t@v#zr$@8x*")
 
-# Режим дебага
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
-# Разрешённые хосты
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 
-# ==========================
-# 📌 Приложения
-# ==========================
 INSTALLED_APPS = [
-    # UI
     "jazzmin",
 
-    # Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -35,7 +25,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
 
-    # Библиотеки
     "django_filters",
     "leaflet",
     "rest_framework",
@@ -46,18 +35,14 @@ INSTALLED_APPS = [
     "ckeditor",
     "ckeditor_uploader",
 
-    # Локальные приложения
     "Alma",
     "User",
     "Product",
 ]
 
 
-# ==========================
-# 📌 Middleware
-# ==========================
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # должно быть первым для CORS
+    "corsheaders.middleware.CorsMiddleware", 
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -68,16 +53,10 @@ MIDDLEWARE = [
 ]
 
 
-# ==========================
-# 📌 URL / WSGI
-# ==========================
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# ==========================
-# 📌 База данных
-# ==========================
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -90,18 +69,15 @@ DATABASES = {
 }
 
 
-# ==========================
-# 📌 Шаблоны
-# ==========================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # папка для шаблонов
+        "DIRS": [BASE_DIR / "templates"], 
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
-                "django.template.context_processors.request",  # важно для админки
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -110,9 +86,6 @@ TEMPLATES = [
 ]
 
 
-# ==========================
-# 📌 Аутентификация
-# ==========================
 AUTH_USER_MODEL = "User.CustomUser"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -123,9 +96,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# ==========================
-# 📌 DRF + JWT
-# ==========================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -142,18 +112,12 @@ SIMPLE_JWT = {
 }
 
 
-# ==========================
-# 📌 Локализация
-# ==========================
 LANGUAGE_CODE = "ru-ru"
 TIME_ZONE = "Asia/Bishkek"
 USE_I18N = True
 USE_TZ = True
 
 
-# ==========================
-# 📌 Статика и медиа
-# ==========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
@@ -161,9 +125,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# ==========================
-# 📌 CKEditor
-# ==========================
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
     "default": {
@@ -174,32 +135,45 @@ CKEDITOR_CONFIGS = {
 }
 
 
-# ==========================
-# 📌 Jazzmin (админка)
-# ==========================
 JAZZMIN_SETTINGS = {
+    "site_title": "My Project Admin",
+    "site_header": "My Project",
+    "site_brand": "My Project",
     "show_sidebar": True,
     "navigation_expanded": True,
+    "show_ui_builder": True,
     "icons": {
-        "API.Board": "fas fa-clipboard",
+        # Alma
+        "alma.board": "dashboard",
+        "alma.stock": "local_offer",
+        "alma.story": "history",
+        "alma.store": "store",
+        "alma.hurrybuy": "flash_on",
+        
+        # Product
+        "product.category_product": "category",
+        "product.product": "inventory_2",
+        "product.cart": "shopping_cart",
+        "product.cartitem": "add_shopping_cart",
+        "product.address": "location_on",
+        "product.order": "receipt_long",
+        "product.orderitem": "inventory_2",
+        
+        # User
+        "user.customuser": "person",
+        "user.verification": "verified_user",
+        "user.notification": "notifications",
     },
+    "custom_css": None,
+    "custom_js": None,
 }
 
 
-# ==========================
-# 📌 Почта (замени на свои)
-# ==========================
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "noreply@supermarket.com"
 
 
-# ==========================
-# 📌 CORS
-# ==========================
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-# ==========================
-# 📌 ID для моделей
-# ==========================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

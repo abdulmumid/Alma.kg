@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from .serializers import (
     RegisterSerializer, VerifyEmailSerializer, LoginSerializer,
-    ForgotPasswordSerializer, ResetPasswordSerializer, ProfileUpdateSerializer
+    ForgotPasswordSerializer, ResetPasswordSerializer, ProfileUpdateSerializer, NotificationSerializer
 )
+from .models import Notification
 
 
 # POST /api/auth/register
@@ -90,3 +91,12 @@ class ProfileView(APIView):
         s.is_valid(raise_exception=True)
         s.save()
         return Response({"detail": "Профиль обновлён"})
+
+
+# 🔔 Уведомления
+class NotificationViewSet(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
