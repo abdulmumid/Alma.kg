@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
   db:
-    image: postgis/postgis:latest
-    container_name: postgis-db
+    image: postgis/postgis:17-3.5
+    container_name: alma_postgis
     environment:
       POSTGRES_USER: almauser
       POSTGRES_PASSWORD: alma4231
       POSTGRES_DB: alma_db
-    volumes:
-      - postgis_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgis_data:
+  postgres_data:

@@ -25,10 +25,12 @@ urlpatterns = [
     # Документация API
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 
-    # Основное API приложения
-    path('api/', include('Alma.urls')),
+    # API приложения с разными префиксами
+    path('api/alma/', include('Alma.urls')), 
+    path('api/user/', include('User.urls')),   
+    path('api/product/', include('Product.urls')),
 ]
 
-# 📌 Настройки медиа-файлов
+# 📌 Настройки медиа-файлов (только в DEBUG)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
