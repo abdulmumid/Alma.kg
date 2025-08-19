@@ -26,7 +26,7 @@ class StoreListView(generics.ListAPIView):
         qs = Store.objects.all()
         lat = self.request.query_params.get("lat")
         lon = self.request.query_params.get("lon")
-        radius = self.request.query_params.get("radius")  # км
+        radius = self.request.query_params.get("radius") 
 
         if lat and lon:
             try:
