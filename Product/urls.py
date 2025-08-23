@@ -14,4 +14,5 @@ router.register(r'cart', CartViewSet, basename='cart')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('products/check-price/', CheckPriceView.as_view(), name='check_price'),
 ]

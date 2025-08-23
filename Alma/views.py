@@ -76,22 +76,6 @@ class StoryViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-# 🏷 Проверка цены
-class CheckPriceView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request):
-        barcode = request.query_params.get('barcode')
-        if not barcode:
-            return Response({'error': 'Штрихкод обязателен'}, status=status.HTTP_400_BAD_REQUEST)
-
-        product = Product.objects.filter(barcode=barcode).first()
-        if not product:
-            return Response({'error': 'Товар не найден'}, status=status.HTTP_404_NOT_FOUND)
-
-        return Response(ProductSerializer(product).data)
-
-
 # ⚡ Срочная покупка
 class HurryBuyViewSet(viewsets.ModelViewSet):
     queryset = HurryBuy.objects.all().order_by('-start_date')
