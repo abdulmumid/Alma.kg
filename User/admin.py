@@ -1,19 +1,25 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Notification
 
+# ==============================
+# CustomUserAdmin
+# ==============================
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
     list_display = ('email', 'first_name', 'last_name', 'is_staff', 'is_verified')
     list_filter = ('is_staff', 'is_verified', 'is_active')
     search_fields = ('email', 'first_name', 'last_name')
-    ordering = ('email',)  # <-- заменили username на email
+    ordering = ('email',)
+    readonly_fields = ('get_qr_code',)  
+
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'birth_date', 'qr_code')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'get_qr_code')}),
         ('Permissions', {'fields': ('is_staff', 'is_superuser', 'is_active', 'is_verified', 'groups', 'user_permissions')}),
     )
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -21,12 +27,22 @@ class CustomUserAdmin(UserAdmin):
         ),
     )
 
-# 📌 Уведомления
+    def get_qr_code(self, obj):
+        if obj.qr_code:
+            return f'<a href="{obj.qr_code.url}" target="_blank">Смотреть QR</a>'
+        return "-"
+    get_qr_code.allow_tags = True
+    get_qr_code.short_description = "QR код"
+
+
+# ==============================
+# NotificationAdmin
+# ==============================
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    icon_name = "notifications" 
+    icon_name = "notifications"
     list_display = ('user', 'message', 'is_read', 'created_at')
-    search_fields = ('user__phone', 'user__email', 'message')
+    search_fields = ('user__phone_number', 'user__email', 'message')
     list_filter = ('is_read', 'created_at')
     readonly_fields = ('created_at',)
     actions = ['send_to_all_users']

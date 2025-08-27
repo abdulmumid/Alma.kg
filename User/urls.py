@@ -1,38 +1,21 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    RegisterView,
-    VerifyEmailOTPView,
-    ResendOTPView,
-    ResetPasswordView,
-    ResetPasswordConfirmView,
-    UpdateUserView,
-    DeleteAccountView,
-    NotificationViewSet,
+    RegisterView, VerifyOTPView, ResendOTPView, LoginView,
+    ResetPasswordView, ResetPasswordConfirmView,
+    UserMeView, UserUpdateProfileView, UserDeleteAccountView,
+    NotificationListCreateView, NotificationRetrieveUpdateDeleteView
 )
 
 urlpatterns = [
-    # Регистрация
-    path("register/", RegisterView.as_view(), name="register"),
-
-    # Подтверждение email по коду OTP
-    path("verify/", VerifyEmailOTPView.as_view(), name="verify-email-otp"),
-
-    # Повторная отправка OTP
-    path("resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
-
-    # Авторизация JWT
-    path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-
-    # Сброс пароля через OTP
-    path("password-reset/", ResetPasswordView.as_view(), name="password-reset-otp"),
-    path("password-reset-confirm/", ResetPasswordConfirmView.as_view(), name="password-reset-confirm-otp"),
-
-    # Управление аккаунтом
-    path("update/", UpdateUserView.as_view(), name="update-account"),
-    path("delete/", DeleteAccountView.as_view(), name="delete-account"),
-
-    # Уведомления
-    path("notifications/", NotificationViewSet.as_view(), name="user-notifications"),
+    path("api/auth/register/", RegisterView.as_view(), name="register"),
+    path("api/auth/verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
+    path("api/auth/resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
+    path("api/auth/login/", LoginView.as_view(), name="login"),
+    path("api/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+    path("api/auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="reset-password-confirm"),
+    path("api/user/me/", UserMeView.as_view(), name="user-me"),
+    path("api/user/update-profile/", UserUpdateProfileView.as_view(), name="update-profile"),
+    path("api/user/delete-account/", UserDeleteAccountView.as_view(), name="delete-account"),
+    path("api/notifications/", NotificationListCreateView.as_view(), name="notifications-list-create"),
+    path("api/notifications/<int:pk>/", NotificationRetrieveUpdateDeleteView.as_view(), name="notifications-detail"),
 ]

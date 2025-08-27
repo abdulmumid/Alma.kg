@@ -7,16 +7,12 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-38!s$7g@0o!2zxt1r9q1^e4b@r-9fxt9%=g+9v5t@v#zr$@8x*")
-
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
-
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
-
 
 INSTALLED_APPS = [
     "jazzmin",
-
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -24,7 +20,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.gis",
-
     "django_filters",
     "leaflet",
     "rest_framework",
@@ -34,15 +29,13 @@ INSTALLED_APPS = [
     "corsheaders",
     "ckeditor",
     "ckeditor_uploader",
-
     "Alma",
     "User",
     "Product",
 ]
 
-
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware", 
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -52,10 +45,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
-
 
 DATABASES = {
     "default": {
@@ -68,11 +59,10 @@ DATABASES = {
     }
 }
 
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"], 
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -85,7 +75,6 @@ TEMPLATES = [
     },
 ]
 
-
 AUTH_USER_MODEL = "User.CustomUser"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -94,7 +83,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
-
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -111,19 +99,16 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-
 LANGUAGE_CODE = "ru-ru"
 TIME_ZONE = "Asia/Bishkek"
 USE_I18N = True
 USE_TZ = True
-
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
@@ -134,7 +119,6 @@ CKEDITOR_CONFIGS = {
     },
 }
 
-
 JAZZMIN_SETTINGS = {
     "site_title": "My Project Admin",
     "site_header": "My Project",
@@ -143,14 +127,11 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     "show_ui_builder": True,
     "icons": {
-        # Alma
         "alma.board": "dashboard",
         "alma.stock": "local_offer",
         "alma.story": "history",
         "alma.store": "store",
         "alma.hurrybuy": "flash_on",
-        
-        # Product
         "product.category_product": "category",
         "product.product": "inventory_2",
         "product.cart": "shopping_cart",
@@ -158,30 +139,24 @@ JAZZMIN_SETTINGS = {
         "product.address": "location_on",
         "product.order": "receipt_long",
         "product.orderitem": "inventory_2",
-        
-        # User
-        "user.customuser": "person",
-        "user.verification": "verified_user",
-        "user.notification": "notifications",
     },
     "custom_css": None,
     "custom_js": None,
 }
 
+USE_CONSOLE_EMAIL = os.getenv("USE_CONSOLE_EMAIL", "True").lower() in ("true", "1", "t")
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "noreply@supermarket.com"
-
+if USE_CONSOLE_EMAIL:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@supermarket.com")
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "t")
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 CORS_ALLOW_ALL_ORIGINS = True
-
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "skorpion21818@gmail.com"       # твой Gmail
-EMAIL_HOST_PASSWORD = "xcgigmqswdyxhwbk"  # пароль приложения
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
