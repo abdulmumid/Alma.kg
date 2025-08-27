@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import OTP, Notification
+from .models import OTP, Notification, UserBonus, BonusTransaction
 
 User = get_user_model()
 
@@ -29,7 +29,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get("last_name", "")
         )
         otp = OTP.create_otp(user, purpose="registration")
-        # возвращаем словарь с объектом пользователя и кодом OTP
         return {"user": user, "otp": otp.code}
 
 
@@ -168,6 +167,30 @@ class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["first_name", "last_name", "phone_number"]
+
+
+# ==============================
+# Пользователь
+# ==============================
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "email", "first_name", "last_name", "phone_number", "is_verified"]
+
+
+# ==============================
+# Бонусы
+# ==============================
+class UserBonusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserBonus
+        fields = ["total_points"]
+
+
+class BonusTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BonusTransaction
+        fields = ["id", "points", "transaction_type", "description", "qr_code", "created_at"]
 
 
 # ==============================

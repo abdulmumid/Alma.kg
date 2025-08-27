@@ -7,12 +7,9 @@ import random
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
 from django.core.exceptions import ValidationError
-from django.utils.text import slugify
 from ckeditor_uploader.fields import RichTextUploadingField
 
-# ==============================
 # Менеджер пользователя
-# ==============================
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -30,27 +27,21 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-# ==============================
 # Пользовательская модель
-# ==============================
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField("Email", unique=True)
-    phone_number = PhoneNumberField("Телефон", blank=True, null=True, unique=True)
-    first_name = models.CharField("Имя", max_length=50)
-    last_name = models.CharField("Фамилия", max_length=50)
-    is_active = models.BooleanField("Активен", default=True)
-    is_staff = models.BooleanField("Сотрудник", default=False)
-    is_verified = models.BooleanField("Email подтверждён", default=False)
-    date_joined = models.DateTimeField("Дата регистрации", default=timezone.now)
+    email = models.EmailField(unique=True)
+    phone_number = PhoneNumberField(blank=True, null=True, unique=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = CustomUserManager()
-
-    class Meta:
-        verbose_name = "Пользователь"
-        verbose_name_plural = "Пользователи"
 
     def __str__(self):
         return self.email
@@ -66,27 +57,17 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
                 raise ValidationError("Введите корректный номер телефона Кыргызстана (+996)")
 
 
-# ==============================
 # OTP модель
-# ==============================
 class OTP(models.Model):
     PURPOSE_CHOICES = (
         ("registration", "Регистрация"),
         ("reset_password", "Сброс пароля"),
     )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,  # ✅ вместо User
-        on_delete=models.CASCADE,
-        verbose_name="Пользователь"
-    )
-    code = models.CharField("Код", max_length=6)
-    purpose = models.CharField("Назначение", max_length=20, choices=PURPOSE_CHOICES, default="registration")
-    created_at = models.DateTimeField("Создано", auto_now_add=True)
-    is_used = models.BooleanField("Использован", default=False)
-
-    class Meta:
-        verbose_name = "OTP код"
-        verbose_name_plural = "OTP коды"
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default="registration")
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
 
     @property
     def expires_at(self):
@@ -102,25 +83,69 @@ class OTP(models.Model):
     @classmethod
     def create_otp(cls, user, purpose="registration"):
         code = cls.generate_code()
-        otp = cls.objects.create(user=user, code=code, purpose=purpose)
-        return otp  # ✅ чтобы вернуть сам объект с кодом
+        return cls.objects.create(user=user, code=code, purpose=purpose)
 
 
-# ==============================
+# Баланс пользователя
+class UserBonus(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bonus')
+    total_points = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.total_points} бонусов"
+
+    def add_points(self, points, description="", qr_code=None):
+        self.total_points += points
+        self.save()
+        BonusTransaction.objects.create(
+            user=self.user,
+            points=points,
+            transaction_type='earned',
+            description=description,
+            qr_code=qr_code
+        )
+
+    def spend_points(self, points, description="", qr_code=None):
+        if points > self.total_points:
+            raise ValueError("Недостаточно бонусов")
+        self.total_points -= points
+        self.save()
+        BonusTransaction.objects.create(
+            user=self.user,
+            points=points,
+            transaction_type='spent',
+            description=description,
+            qr_code=qr_code
+        )
+
+
+# История начислений/списаний
+class BonusTransaction(models.Model):
+    TRANSACTION_TYPE = (
+        ('earned', 'Начислено'),
+        ('spent', 'Потрачено'),
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bonus_transactions')
+    points = models.PositiveIntegerField()
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE)
+    description = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    qr_code = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        action = "начислено" if self.transaction_type == "earned" else "потрачено"
+        return f"{self.user.email} - {self.points} бонусов {action}"
+
+
 # Модель уведомлений
-# ==============================
 class Notification(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
-    message = models.TextField("Сообщение")
-    is_read = models.BooleanField("Прочитано", default=False)
-    created_at = models.DateTimeField("Создано", auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = RichTextUploadingField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Уведомление"
-        verbose_name_plural = "Уведомления"
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"Уведомление для {self.user.email} — {'✔' if self.is_read else '✖'}"
-
-
