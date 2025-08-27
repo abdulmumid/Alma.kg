@@ -1,13 +1,8 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
-from django.contrib.auth import get_user_model
 from leaflet.admin import LeafletGeoAdmin
 from .models import HurryBuy, Board, Stock, Story, Store
 
-User = get_user_model()
-
-
-# 🔹 Миксин для превью изображений
 class ImagePreviewMixin:
     @admin.display(description='Изображение')
     def image_preview(self, obj):

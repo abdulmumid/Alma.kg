@@ -1,48 +1,25 @@
-from django.contrib import admin, messages
-from django.utils.safestring import mark_safe
+from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Verification, Notification
+from .models import CustomUser, Notification
 
-# 📌 Пользователи
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    icon_name = "person" 
-    list_display = ("email", "phone", "first_name", "last_name", "is_active", "is_staff", "qr_thumb")
-    ordering = ("email",)
-    search_fields = ("email", "phone", "first_name", "last_name")
-
+    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'is_verified')
+    list_filter = ('is_staff', 'is_verified', 'is_active')
+    search_fields = ('email', 'first_name', 'last_name')
+    ordering = ('email',)  # <-- заменили username на email
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
-        ("Личные данные", {"fields": ("first_name", "last_name", "phone")}),
-        ("Права", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
-        ("Даты", {"fields": ("last_login", "date_joined")}),
-        ("QR", {"fields": ("qr_payload", "qr_code")}),
+        (None, {'fields': ('email', 'password')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'birth_date', 'qr_code')}),
+        ('Permissions', {'fields': ('is_staff', 'is_superuser', 'is_active', 'is_verified', 'groups', 'user_permissions')}),
     )
-    readonly_fields = ("qr_payload", "qr_code")
-
     add_fieldsets = (
         (None, {
-            "classes": ("wide",),
-            "fields": ("email", "phone", "first_name", "last_name", "password1", "password2", "is_active", "is_staff", "is_superuser"),
-        }),
+            'classes': ('wide',),
+            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'is_staff', 'is_superuser', 'is_verified')}
+        ),
     )
-
-    @admin.display(description="QR")
-    def qr_thumb(self, obj):
-        if obj.qr_code:
-            return mark_safe(f'<img src="{obj.qr_code.url}" width="64" height="64" />')
-        return "-"
-
-
-# 📌 Верификации
-@admin.register(Verification)
-class VerificationAdmin(admin.ModelAdmin):
-    icon_name = "verified" 
-    list_display = ("user", "purpose", "code", "is_used", "created_at")
-    search_fields = ("user__email", "code")
-    list_filter = ("purpose", "is_used", "created_at")
-
 
 # 📌 Уведомления
 @admin.register(Notification)

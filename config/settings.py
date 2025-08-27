@@ -177,3 +177,11 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "skorpion21818@gmail.com"       # твой Gmail
+EMAIL_HOST_PASSWORD = "xcgigmqswdyxhwbk"  # пароль приложения
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

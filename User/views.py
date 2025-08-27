@@ -1,102 +1,109 @@
+from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
-from rest_framework import generics
 from rest_framework.response import Response
-from rest_framework import permissions, status
-from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import (
-    RegisterSerializer, VerifyEmailSerializer, LoginSerializer,
-    ForgotPasswordSerializer, ResetPasswordSerializer, ProfileUpdateSerializer, NotificationSerializer
+    RegisterSerializer,
+    VerifyOTPSerializer,
+    ResendOTPSerializer,
+    ResetPasswordSerializer,
+    ResetPasswordConfirmSerializer,
+    UpdateUserSerializer,
+    DeleteUserSerializer,
+    NotificationSerializer
 )
 from .models import Notification
 
 
-# POST /api/auth/register
-class RegisterView(APIView):
+# ==============================
+# Регистрация пользователя
+# ==============================
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+# ==============================
+# Верификация OTP
+# ==============================
+class VerifyEmailOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        s = RegisterSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        s.save()
-        return Response({"detail": "Регистрация создана. Проверьте email для кода."}, status=201)
+        serializer = VerifyOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Email успешно подтверждён!"}, status=status.HTTP_200_OK)
 
 
-# POST /api/auth/verify
-class VerifyEmailView(APIView):
+# ==============================
+# Повторная отправка OTP
+# ==============================
+class ResendOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        s = VerifyEmailSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        user = s.save()
-        # при успешной верификации можно сразу выдать токен
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "detail": "Email подтверждён",
-            "access": str(refresh.access_token),
-            "refresh": str(refresh)
-        })
+        serializer = ResendOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Новый код отправлен на email"}, status=status.HTTP_200_OK)
 
 
-# POST /api/auth/login
-class LoginView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        s = LoginSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        user = s.validated_data["user"]
-        refresh = RefreshToken.for_user(user)
-        return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
-
-
-# POST /api/auth/forgot
-class ForgotPasswordView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        s = ForgotPasswordSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        return Response({"detail": "Код отправлен на email"})
-
-
-# POST /api/auth/reset
+# ==============================
+# Сброс пароля
+# ==============================
 class ResetPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        s = ResetPasswordSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        s.save()
-        return Response({"detail": "Пароль обновлён"})
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Письмо с кодом отправлено"}, status=status.HTTP_200_OK)
 
 
-# GET/PATCH /api/profile
-class ProfileView(APIView):
+class ResetPasswordConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
+
+
+# ==============================
+# Обновление данных пользователя
+# ==============================
+class UpdateUserView(generics.UpdateAPIView):
+    serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        data = {
-            "email": request.user.email,
-            "first_name": request.user.first_name,
-            "last_name": request.user.last_name,
-            "phone": request.user.phone,
-            "qr_payload": request.user.qr_payload,
-            "qr_code": request.build_absolute_uri(request.user.qr_code.url) if request.user.qr_code else None,
-        }
-        return Response(data)
-
-    def patch(self, request):
-        s = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
-        s.is_valid(raise_exception=True)
-        s.save()
-        return Response({"detail": "Профиль обновлён"})
+    def get_object(self):
+        return self.request.user
 
 
-# 🔔 Уведомления
-class NotificationViewSet(generics.ListAPIView):
+# ==============================
+# Удаление аккаунта
+# ==============================
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        serializer = DeleteUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Аккаунт удалён"}, status=status.HTTP_200_OK)
+
+
+# ==============================
+# Уведомления
+# ==============================
+class NotificationViewSet(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

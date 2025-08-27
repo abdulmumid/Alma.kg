@@ -1,14 +1,10 @@
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from .serializers import *
 from .models import *
-from Product.models import Product
-from Product.serializers import ProductSerializer
-
 
 # 📈 Доска (только чтение)
 class BoardViewSet(viewsets.ReadOnlyModelViewSet):
