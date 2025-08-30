@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django_filters",
+    
     "leaflet",
     "rest_framework",
     "rest_framework.authtoken",
@@ -29,9 +30,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "ckeditor",
     "ckeditor_uploader",
+
     "Alma",
     "User",
     "Product",
+    "Shop",
 ]
 
 MIDDLEWARE = [

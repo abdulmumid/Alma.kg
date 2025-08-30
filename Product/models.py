@@ -51,10 +51,8 @@ class Product(models.Model):
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
 
-    # Метод для начисления бонусов пользователю
     def award_bonus_to_user(self, user):
         if self.bonus_points > 0:
-            # создаем или получаем объект UserBonus
             user_bonus, created = UserBonus.objects.get_or_create(user=user)
             user_bonus.add_points(
                 points=self.bonus_points,

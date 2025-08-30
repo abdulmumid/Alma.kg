@@ -8,6 +8,10 @@ from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
 from django.core.exceptions import ValidationError
 from ckeditor_uploader.fields import RichTextUploadingField
+from django.contrib.gis.db import models as gis_models
+from django.utils.translation import gettext_lazy as _
+
+User = settings.AUTH_USER_MODEL
 
 # Менеджер пользователя
 class CustomUserManager(BaseUserManager):
@@ -149,3 +153,16 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Уведомление для {self.user.email} — {'✔' if self.is_read else '✖'}"
+
+
+
+class DeliveryAddress(gis_models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="addresses")
+    region = gis_models.ForeignKey("Shop.DeliveryRegion", on_delete=models.CASCADE, related_name="addresses")
+    street = models.CharField(max_length=255)
+    house = models.CharField(max_length=50)
+    location = gis_models.PointField(geography=True, null=True, blank=True)
+    is_default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.street}, {self.house} ({self.region.name})"

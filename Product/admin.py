@@ -33,10 +33,11 @@ class ProductAdmin(ImagePreviewMixin, admin.ModelAdmin):
     list_filter = ('is_featured', 'category', 'store')
     readonly_fields = ('created_at', 'updated_at', 'image_preview')
     fields = (
-        'name', 'category', 'price', 'discount', 'bonus_points', 'barcode', 'label',
-        'image', 'image_preview', 'is_featured', 'store',
-        'created_at', 'updated_at'
+    'name', 'category', 'price', 'discount', 'bonus_points', 'barcode',
+    'image', 'image_preview', 'is_featured', 'store',
+    'created_at', 'updated_at'
     )
+
 
     @admin.display(description="Цена со скидкой")
     def final_price_display(self, obj):

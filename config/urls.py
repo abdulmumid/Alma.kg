@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/alma/', include('Alma.urls')), 
     path('api/user/', include('User.urls')),   
     path('api/product/', include('Product.urls')),
+    path('api/shop/', include('Shop.urls')),
 ]
 
 

@@ -1,22 +1,20 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Notification, OTP, UserBonus, BonusTransaction
+from .models import Notification, OTP, UserBonus, BonusTransaction, DeliveryAddress
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, ResendOTPSerializer,
     LoginSerializer, ResetPasswordSerializer, ResetPasswordConfirmSerializer,
     UpdateUserSerializer, NotificationSerializer, UserBonusSerializer,
-    BonusTransactionSerializer
+    BonusTransactionSerializer, DeliveryAddressSerializer
 )
 from .permissions import IsEmailVerified
 
 
-# ==============================
 # Регистрация, OTP и логин
-# ==============================
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -101,9 +99,7 @@ class LoginView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
 
 
-# ==============================
 # Сброс пароля
-# ==============================
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [permissions.AllowAny]
@@ -134,9 +130,7 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
         return Response({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
 
 
-# ==============================
 # Пользователь
-# ==============================
 class UserMeView(generics.RetrieveAPIView):
     serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -160,15 +154,12 @@ class UserDeleteAccountView(generics.DestroyAPIView):
         return self.request.user
 
 
-# ==============================
 # Бонусы
-# ==============================
 class UserBonusView(generics.RetrieveAPIView):
     serializer_class = UserBonusSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def get_object(self):
-        # Создаем UserBonus при первом запросе
         bonus, _ = UserBonus.objects.get_or_create(user=self.request.user)
         return bonus
 
@@ -181,9 +172,7 @@ class BonusTransactionListView(generics.ListAPIView):
         return BonusTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-# ==============================
 # Уведомления
-# ==============================
 class NotificationListCreateView(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -201,3 +190,11 @@ class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
+
+
+class DeliveryAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = DeliveryAddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return DeliveryAddress.objects.filter(user=self.request.user)
