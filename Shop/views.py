@@ -44,17 +44,18 @@ class CreateOrderView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         cart = get_object_or_404(Cart, user=request.user, is_active=True)
         address_id = request.data.get("address")
-        used_bonus = request.data.get("used_bonus_points", 0)
+        used_bonus = int(request.data.get("used_bonus_points", 0))
 
-        order = Order.objects.create(
-            user=request.user,
-            cart=cart,
-            address_id=address_id,
-            used_bonus_points=used_bonus
-        )
+        serializer = self.get_serializer(data={
+            "user": request.user.id,
+            "cart": cart.id,
+            "address": address_id,
+            "used_bonus_points": used_bonus
+        })
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
 
-        serializer = self.get_serializer(order)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
 
 
 class DeliveryRegionListView(generics.ListAPIView):

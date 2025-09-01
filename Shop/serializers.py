@@ -21,12 +21,30 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    cart = CartSerializer(read_only=True)
+    cart = serializers.PrimaryKeyRelatedField(queryset=Cart.objects.filter(is_active=True))
+    items = CartItemSerializer(source="cart.items", many=True, read_only=True)
 
     class Meta:
         model = Order
-        fields = ["id", "user", "cart", "address", "total_price", "used_bonus_points", "status", "created_at"]
+        fields = [
+            "id",
+            "user",
+            "cart",
+            "items",
+            "address",
+            "total_price",
+            "used_bonus_points",
+            "status",
+            "created_at"
+        ]
         read_only_fields = ["total_price", "status", "created_at"]
+
+    def create(self, validated_data):
+        order = super().create(validated_data)
+        order.calculate_total_price()  # пересчёт суммы заказа
+        order.apply_bonuses()          # списание бонусов
+        order.award_bonuses()          # начисление бонусов
+        return order
 
 
 class DeliveryRegionSerializer(serializers.ModelSerializer):
