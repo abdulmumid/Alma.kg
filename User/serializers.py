@@ -31,8 +31,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", "")
         )
-        otp = OTP.create_otp(user, purpose="registration")
-        return {"user": user, "otp": otp}
+        # создаём OTP, но возвращаем только user (иначе ошибка)
+        OTP.create_otp(user, purpose="registration")
+        return user
 
 
 class VerifyOTPSerializer(serializers.Serializer):
@@ -44,14 +45,16 @@ class VerifyOTPSerializer(serializers.Serializer):
             user = User.objects.get(email=data["email"])
         except User.DoesNotExist:
             raise serializers.ValidationError("Пользователь не найден")
-        try:
-            otp = OTP.objects.filter(
-                user=user, code=data["code"], is_used=False, purpose="registration"
-            ).latest("created_at")
-        except OTP.DoesNotExist:
+
+        otp = OTP.objects.filter(
+            user=user, code=data["code"], is_used=False, purpose="registration"
+        ).order_by("-created_at").first()
+
+        if not otp:
             raise serializers.ValidationError("Неверный код")
         if otp.is_expired():
             raise serializers.ValidationError("Код просрочен")
+
         data["user"] = user
         data["otp"] = otp
         return data
@@ -74,8 +77,10 @@ class ResendOTPSerializer(serializers.Serializer):
             user = User.objects.get(email=data["email"])
         except User.DoesNotExist:
             raise serializers.ValidationError("Пользователь не найден")
+
         if user.is_verified:
             raise serializers.ValidationError("Email уже подтверждён")
+
         data["user"] = user
         return data
 
@@ -103,8 +108,8 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def save(self):
         user = self.validated_data["user"]
-        otp = OTP.create_otp(user, purpose="reset_password")
-        return {"user": user, "otp": otp}
+        OTP.create_otp(user, purpose="reset_password")
+        return user
 
 
 class ResetPasswordConfirmSerializer(serializers.Serializer):
@@ -116,18 +121,21 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
     def validate(self, data):
         if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError("Пароли не совпадают")
+
         try:
             user = User.objects.get(email=data["email"])
         except User.DoesNotExist:
             raise serializers.ValidationError("Пользователь не найден")
-        try:
-            otp = OTP.objects.filter(
-                user=user, code=data["code"], is_used=False, purpose="reset_password"
-            ).latest("created_at")
-        except OTP.DoesNotExist:
+
+        otp = OTP.objects.filter(
+            user=user, code=data["code"], is_used=False, purpose="reset_password"
+        ).order_by("-created_at").first()
+
+        if not otp:
             raise serializers.ValidationError("Неверный код")
         if otp.is_expired():
             raise serializers.ValidationError("Код просрочен")
+
         data["user"] = user
         data["otp"] = otp
         return data
@@ -181,14 +189,20 @@ class DeliveryAddressSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user']
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("Пользователь обязателен")
+        validated_data['user'] = request.user
+
         if validated_data.get('is_default'):
-            DeliveryAddress.objects.filter(user=user, is_default=True).update(is_default=False)
+            DeliveryAddress.objects.filter(user=request.user, is_default=True).update(is_default=False)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        user = self.context['request'].user
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("Пользователь обязателен")
+
         if validated_data.get('is_default'):
-            DeliveryAddress.objects.filter(user=user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
+            DeliveryAddress.objects.filter(user=request.user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
         return super().update(instance, validated_data)

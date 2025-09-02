@@ -4,6 +4,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 from .models import Notification, OTP, UserBonus, BonusTransaction, DeliveryAddress
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, ResendOTPSerializer,
@@ -13,7 +14,12 @@ from .serializers import (
 )
 from .permissions import IsEmailVerified
 
+# Хелпер для отправки письма
+def send_user_mail(subject, message, recipient):
+    if recipient:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient])
 
+# Регистрация пользователя
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -21,21 +27,23 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()  # {'user': user, 'otp': otp}
-        user = result['user']
-        otp = result['otp']
-        send_mail(
+        user = serializer.save()
+
+        # Создание OTP и сохранение в базе
+        otp = OTP.objects.create(user=user, code=OTP.generate_code(), purpose="registration")
+
+        send_user_mail(
             "Ваш код подтверждения",
             f"Ваш код подтверждения: {otp.code}. Никому не передавайте этот код.",
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email]
+            user.email
         )
-        return Response({
-            "message": "Регистрация успешна! Проверьте email для подтверждения.",
-            "email": user.email
-        }, status=status.HTTP_201_CREATED)
 
+        return Response(
+            {"message": "Регистрация успешна! Проверьте email для подтверждения.", "email": user.email},
+            status=status.HTTP_201_CREATED
+        )
 
+# Подтверждение OTP
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = VerifyOTPSerializer
     permission_classes = [permissions.AllowAny]
@@ -51,7 +59,7 @@ class VerifyOTPView(generics.GenericAPIView):
             "refresh": str(refresh)
         }, status=status.HTTP_200_OK)
 
-
+# Повторная отправка OTP
 class ResendOTPView(generics.GenericAPIView):
     serializer_class = ResendOTPSerializer
     permission_classes = [permissions.AllowAny]
@@ -62,15 +70,14 @@ class ResendOTPView(generics.GenericAPIView):
         result = serializer.save()  # {'user': user, 'otp': otp}
         user = result['user']
         otp = result['otp']
-        send_mail(
+        send_user_mail(
             "Ваш новый код подтверждения",
             f"Новый код подтверждения: {otp.code}. Никому не передавайте этот код.",
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email]
+            user.email
         )
         return Response({"message": "Новый код отправлен на email"}, status=status.HTTP_200_OK)
 
-
+# Вход пользователя
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
     permission_classes = [permissions.AllowAny]
@@ -83,7 +90,7 @@ class LoginView(generics.GenericAPIView):
             password=serializer.validated_data["password"]
         )
         if not user:
-            return Response({"error": "Неверный email или пароль"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Неверный email или пароль"}, status=status.HTTP_401_UNAUTHORIZED)
         if not user.is_verified:
             return Response({"error": "Подтвердите email перед входом"}, status=status.HTTP_403_FORBIDDEN)
         refresh = RefreshToken.for_user(user)
@@ -93,7 +100,7 @@ class LoginView(generics.GenericAPIView):
             "refresh": str(refresh)
         }, status=status.HTTP_200_OK)
 
-
+# Сброс пароля — отправка OTP
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [permissions.AllowAny]
@@ -104,15 +111,14 @@ class ResetPasswordView(generics.GenericAPIView):
         result = serializer.save()  # {'user': user, 'otp': otp}
         user = result['user']
         otp = result['otp']
-        send_mail(
+        send_user_mail(
             "Код для сброса пароля",
             f"Ваш код для сброса пароля: {otp.code}. Никому не передавайте этот код.",
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email]
+            user.email
         )
         return Response({"message": "Код для сброса пароля отправлен на email"}, status=status.HTTP_200_OK)
 
-
+# Подтверждение нового пароля
 class ResetPasswordConfirmView(generics.GenericAPIView):
     serializer_class = ResetPasswordConfirmSerializer
     permission_classes = [permissions.AllowAny]
@@ -123,7 +129,7 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
         serializer.save()
         return Response({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
 
-
+# Просмотр профиля
 class UserMeView(generics.RetrieveAPIView):
     serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -131,7 +137,7 @@ class UserMeView(generics.RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
-
+# Обновление профиля
 class UserUpdateProfileView(generics.UpdateAPIView):
     serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -139,21 +145,23 @@ class UserUpdateProfileView(generics.UpdateAPIView):
     def get_object(self):
         return self.request.user
 
-
+# Удаление аккаунта
 class UserDeleteAccountView(generics.DestroyAPIView):
+    serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def get_object(self):
         return self.request.user
 
     def perform_destroy(self, instance):
-        OTP.objects.filter(user=instance).delete()
-        UserBonus.objects.filter(user=instance).delete()
-        BonusTransaction.objects.filter(user=instance).delete()
-        DeliveryAddress.objects.filter(user=instance).delete()
-        instance.delete()
+        with transaction.atomic():
+            OTP.objects.filter(user=instance).delete()
+            UserBonus.objects.filter(user=instance).delete()
+            BonusTransaction.objects.filter(user=instance).delete()
+            DeliveryAddress.objects.filter(user=instance).delete()
+            instance.delete()
 
-
+# Просмотр бонусов
 class UserBonusView(generics.RetrieveAPIView):
     serializer_class = UserBonusSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -162,7 +170,7 @@ class UserBonusView(generics.RetrieveAPIView):
         bonus, _ = UserBonus.objects.get_or_create(user=self.request.user)
         return bonus
 
-
+# Список транзакций
 class BonusTransactionListView(generics.ListAPIView):
     serializer_class = BonusTransactionSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -170,7 +178,7 @@ class BonusTransactionListView(generics.ListAPIView):
     def get_queryset(self):
         return BonusTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
-
+# Уведомления
 class NotificationListCreateView(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -181,7 +189,6 @@ class NotificationListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
 class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -189,7 +196,7 @@ class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
 
-
+# Адреса доставки
 class DeliveryAddressViewSet(viewsets.ModelViewSet):
     serializer_class = DeliveryAddressSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]

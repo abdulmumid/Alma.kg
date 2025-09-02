@@ -8,31 +8,32 @@ from .views import (
     UserBonusView, BonusTransactionListView, DeliveryAddressViewSet
 )
 
+# Router для DeliveryAddress
 router = DefaultRouter()
 router.register(r'addresses', DeliveryAddressViewSet, basename='addresses')
 
 urlpatterns = [
-    # Auth
-    path("api/auth/register/", RegisterView.as_view(), name="register"),
-    path("api/auth/verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
-    path("api/auth/resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
-    path("api/auth/login/", LoginView.as_view(), name="login"),
-    path("api/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
-    path("api/auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="reset-password-confirm"),
+    # Auth endpoints
+    path("auth/register/", RegisterView.as_view(), name="register"),
+    path("auth/verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
+    path("auth/resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
+    path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+    path("auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="reset-password-confirm"),
 
-    # User
-    path("api/user/me/", UserMeView.as_view(), name="user-me"),
-    path("api/user/update-profile/", UserUpdateProfileView.as_view(), name="update-profile"),
-    path("api/user/delete-account/", UserDeleteAccountView.as_view(), name="delete-account"),
+    # User endpoints
+    path("user/me/", UserMeView.as_view(), name="user-me"),
+    path("user/update-profile/", UserUpdateProfileView.as_view(), name="update-profile"),
+    path("user/delete-account/", UserDeleteAccountView.as_view(), name="delete-account"),
 
-    # User Bonus
-    path("api/user/bonus/", UserBonusView.as_view(), name="user-bonus"),
-    path("api/user/bonus/transactions/", BonusTransactionListView.as_view(), name="bonus-transactions"),
+    # User Bonus endpoints
+    path("user/bonus/", UserBonusView.as_view(), name="user-bonus"),
+    path("user/bonus/transactions/", BonusTransactionListView.as_view(), name="bonus-transactions"),
 
-    # Notifications
-    path("api/notifications/", NotificationListCreateView.as_view(), name="notifications-list-create"),
-    path("api/notifications/<int:pk>/", NotificationRetrieveUpdateDeleteView.as_view(), name="notifications-detail"),
+    # Notifications endpoints
+    path("notifications/", NotificationListCreateView.as_view(), name="notifications-list-create"),
+    path("notifications/<int:pk>/", NotificationRetrieveUpdateDeleteView.as_view(), name="notifications-detail"),
 
-    # Delivery addresses via router
-    path("api/", include(router.urls)),
+    # Delivery addresses через router
+    path("", include(router.urls)),
 ]
