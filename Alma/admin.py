@@ -10,7 +10,6 @@ class ImagePreviewMixin:
             return mark_safe(f'<img src="{obj.image.url}" style="max-height:100px; max-width:100px;" />')
         return 'Нет изображения'
 
-
 # 📌 Доски
 @admin.register(Board)
 class BoardAdmin(ImagePreviewMixin, admin.ModelAdmin):
@@ -20,7 +19,6 @@ class BoardAdmin(ImagePreviewMixin, admin.ModelAdmin):
     search_fields = ('title',)
     readonly_fields = ('image_preview', 'created_at', 'updated_at')
 
-
 # 📌 Акции
 @admin.register(Stock)
 class StockAdmin(ImagePreviewMixin, admin.ModelAdmin):
@@ -28,7 +26,6 @@ class StockAdmin(ImagePreviewMixin, admin.ModelAdmin):
     list_display = ('title', 'image_preview', 'created_at', 'updated_at')
     readonly_fields = ('image_preview', 'created_at', 'updated_at')
     fields = ('title', 'description', 'image', 'image_preview', 'created_at', 'updated_at')
-
 
 # 📌 Сторисы
 @admin.register(Story)
@@ -39,7 +36,6 @@ class StoryAdmin(ImagePreviewMixin, admin.ModelAdmin):
     list_filter = ('is_active',)
     readonly_fields = ('image_preview', 'created_at', 'updated_at')
 
-
 # 📌 Магазины
 @admin.register(Store)
 class StoreAdmin(LeafletGeoAdmin):
@@ -47,7 +43,6 @@ class StoreAdmin(LeafletGeoAdmin):
     list_display = ("name", "address", "is_open_24h", "working_hours")
     search_fields = ("name", "address")
     list_filter = ("is_open_24h",)
-
 
 # 📌 Срочная покупка
 @admin.register(HurryBuy)

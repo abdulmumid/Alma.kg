@@ -1,14 +1,12 @@
 from rest_framework import serializers
 from .models import Category_Product, Product
 
-# 📦 Категория продукта
 class CategoryProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category_Product
         fields = ['id', 'name', 'slug']
+        read_only_fields = ['slug']
 
-
-# 🛍️ Полный продукт с категорией и бонусами
 class ProductSerializer(serializers.ModelSerializer):
     category = CategoryProductSerializer(read_only=True)
 
@@ -18,9 +16,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'category', 'price', 'discount', 'final_price',
             'image', 'barcode', 'bonus_points', 'is_featured', 'store', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['final_price', 'created_at', 'updated_at']
 
-
-# 🍭 Упрощённый продукт (для листинга)
 class SimpleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product

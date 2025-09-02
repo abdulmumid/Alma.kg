@@ -14,7 +14,6 @@ from .serializers import (
 from .permissions import IsEmailVerified
 
 
-# Регистрация, OTP и логин
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -22,22 +21,19 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        user = result["user"]
-        otp = result["otp"]
-        self.send_otp_email(user.email, otp)
+        result = serializer.save()  # {'user': user, 'otp': otp}
+        user = result['user']
+        otp = result['otp']
+        send_mail(
+            "Ваш код подтверждения",
+            f"Ваш код подтверждения: {otp.code}. Никому не передавайте этот код.",
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email]
+        )
         return Response({
             "message": "Регистрация успешна! Проверьте email для подтверждения.",
             "email": user.email
         }, status=status.HTTP_201_CREATED)
-
-    def send_otp_email(self, email, otp):
-        send_mail(
-            "Ваш код подтверждения",
-            f"Ваш код подтверждения: {otp}. Никому не передавайте этот код.",
-            settings.DEFAULT_FROM_EMAIL,
-            [email]
-        )
 
 
 class VerifyOTPView(generics.GenericAPIView):
@@ -63,12 +59,12 @@ class ResendOTPView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        user = result["user"]
-        otp = result["otp"]
+        result = serializer.save()  # {'user': user, 'otp': otp}
+        user = result['user']
+        otp = result['otp']
         send_mail(
             "Ваш новый код подтверждения",
-            f"Новый код подтверждения: {otp}. Никому не передавайте этот код.",
+            f"Новый код подтверждения: {otp.code}. Никому не передавайте этот код.",
             settings.DEFAULT_FROM_EMAIL,
             [user.email]
         )
@@ -90,7 +86,6 @@ class LoginView(generics.GenericAPIView):
             return Response({"error": "Неверный email или пароль"}, status=status.HTTP_400_BAD_REQUEST)
         if not user.is_verified:
             return Response({"error": "Подтвердите email перед входом"}, status=status.HTTP_403_FORBIDDEN)
-
         refresh = RefreshToken.for_user(user)
         return Response({
             "message": "Успешный вход",
@@ -99,7 +94,6 @@ class LoginView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
 
 
-# Сброс пароля
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [permissions.AllowAny]
@@ -107,12 +101,12 @@ class ResetPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        user = result["user"]
-        otp = result["otp"]
+        result = serializer.save()  # {'user': user, 'otp': otp}
+        user = result['user']
+        otp = result['otp']
         send_mail(
             "Код для сброса пароля",
-            f"Ваш код для сброса пароля: {otp}. Никому не передавайте этот код.",
+            f"Ваш код для сброса пароля: {otp.code}. Никому не передавайте этот код.",
             settings.DEFAULT_FROM_EMAIL,
             [user.email]
         )
@@ -130,7 +124,6 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
         return Response({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
 
 
-# Пользователь
 class UserMeView(generics.RetrieveAPIView):
     serializer_class = UpdateUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -153,8 +146,14 @@ class UserDeleteAccountView(generics.DestroyAPIView):
     def get_object(self):
         return self.request.user
 
+    def perform_destroy(self, instance):
+        OTP.objects.filter(user=instance).delete()
+        UserBonus.objects.filter(user=instance).delete()
+        BonusTransaction.objects.filter(user=instance).delete()
+        DeliveryAddress.objects.filter(user=instance).delete()
+        instance.delete()
 
-# Бонусы
+
 class UserBonusView(generics.RetrieveAPIView):
     serializer_class = UserBonusSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -172,7 +171,6 @@ class BonusTransactionListView(generics.ListAPIView):
         return BonusTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-# Уведомления
 class NotificationListCreateView(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
@@ -194,7 +192,19 @@ class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView
 
 class DeliveryAddressViewSet(viewsets.ModelViewSet):
     serializer_class = DeliveryAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def get_queryset(self):
         return DeliveryAddress.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if serializer.validated_data.get('is_default'):
+            DeliveryAddress.objects.filter(user=user, is_default=True).update(is_default=False)
+        serializer.save(user=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if serializer.validated_data.get('is_default'):
+            DeliveryAddress.objects.filter(user=user, is_default=True).exclude(pk=serializer.instance.pk).update(is_default=False)
+        serializer.save()

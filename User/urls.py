@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterView, VerifyOTPView, ResendOTPView, LoginView,
     ResetPasswordView, ResetPasswordConfirmView,
@@ -7,7 +8,11 @@ from .views import (
     UserBonusView, BonusTransactionListView, DeliveryAddressViewSet
 )
 
+router = DefaultRouter()
+router.register(r'addresses', DeliveryAddressViewSet, basename='addresses')
+
 urlpatterns = [
+    # Auth
     path("api/auth/register/", RegisterView.as_view(), name="register"),
     path("api/auth/verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
     path("api/auth/resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
@@ -15,15 +20,19 @@ urlpatterns = [
     path("api/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("api/auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="reset-password-confirm"),
 
+    # User
     path("api/user/me/", UserMeView.as_view(), name="user-me"),
     path("api/user/update-profile/", UserUpdateProfileView.as_view(), name="update-profile"),
     path("api/user/delete-account/", UserDeleteAccountView.as_view(), name="delete-account"),
 
+    # User Bonus
     path("api/user/bonus/", UserBonusView.as_view(), name="user-bonus"),
     path("api/user/bonus/transactions/", BonusTransactionListView.as_view(), name="bonus-transactions"),
 
+    # Notifications
     path("api/notifications/", NotificationListCreateView.as_view(), name="notifications-list-create"),
     path("api/notifications/<int:pk>/", NotificationRetrieveUpdateDeleteView.as_view(), name="notifications-detail"),
 
-    path("api/addresses/", DeliveryAddressViewSet.as_view({'get': 'list', 'post': 'create'}), name="address-list-create"),
+    # Delivery addresses via router
+    path("api/", include(router.urls)),
 ]

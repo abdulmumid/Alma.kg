@@ -9,9 +9,7 @@ from django.core.mail import send_mail
 
 User = settings.AUTH_USER_MODEL
 
-# ----------------------------
-# Корзина и элементы корзины
-# ----------------------------
+# 🛒 Корзина
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="carts", verbose_name=_("Пользователь"))
     created_at = models.DateTimeField(_("Дата создания"), auto_now_add=True)
@@ -28,7 +26,7 @@ class Cart(models.Model):
     def get_total_price(self):
         return sum(item.get_total_price() for item in self.items.all())
 
-
+# 🛍️ Элемент корзины
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items", verbose_name=_("Корзина"))
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name=_("Продукт"))
@@ -44,10 +42,7 @@ class CartItem(models.Model):
     def __str__(self):
         return f"{self.product.name} × {self.quantity}"
 
-
-# ----------------------------
-# Заказ
-# ----------------------------
+# 🧾 Заказ
 class Order(gis_models.Model):
     STATUS_CHOICES = (
         ("pending", _("В обработке")),
@@ -80,25 +75,16 @@ class Order(gis_models.Model):
         self.save()
 
     def apply_bonuses(self):
-        try:
-            user_bonus = getattr(self.user, "bonus", None)
-        except Exception:
-            return
+        user_bonus = getattr(self.user, "bonus", None)
         if user_bonus and self.used_bonus_points > 0:
-            user_bonus.spend_points(
-                points=self.used_bonus_points,
-                description=f"Оплата заказа №{self.id}"
-            )
+            user_bonus.spend_points(points=self.used_bonus_points, description=f"Оплата заказа №{self.id}")
 
     def award_bonuses(self):
         for item in self.cart.items.all():
             if hasattr(item.product, "award_bonus_to_user"):
                 item.product.award_bonus_to_user(self.user)
 
-
-# ----------------------------
-# Сигнал: отправка email при создании заказа
-# ----------------------------
+# ✉️ Сигнал: отправка email при создании заказа
 @receiver(post_save, sender=Order)
 def send_order_email(sender, instance, created, **kwargs):
     if created:
@@ -121,7 +107,7 @@ def send_order_email(sender, instance, created, **kwargs):
             fail_silently=False,
         )
 
-
+# 🌍 Регион доставки
 class DeliveryRegion(models.Model):
     name = models.CharField(_("Регион"), max_length=100, unique=True)
 

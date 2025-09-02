@@ -2,11 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import OTP, Notification, UserBonus, BonusTransaction, DeliveryAddress
 
-
 User = get_user_model()
 
 
-# Регистрация
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
@@ -14,6 +12,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["email", "first_name", "last_name", "password", "confirm_password"]
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Пользователь с этим email уже существует")
+        return value
 
     def validate(self, data):
         if data["password"] != data["confirm_password"]:
@@ -29,10 +32,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get("last_name", "")
         )
         otp = OTP.create_otp(user, purpose="registration")
-        return {"user": user, "otp": otp.code}
+        return {"user": user, "otp": otp}
 
 
-# Проверка OTP
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
@@ -42,20 +44,14 @@ class VerifyOTPSerializer(serializers.Serializer):
             user = User.objects.get(email=data["email"])
         except User.DoesNotExist:
             raise serializers.ValidationError("Пользователь не найден")
-
         try:
             otp = OTP.objects.filter(
-                user=user,
-                code=data["code"],
-                is_used=False,
-                purpose="registration"
+                user=user, code=data["code"], is_used=False, purpose="registration"
             ).latest("created_at")
         except OTP.DoesNotExist:
             raise serializers.ValidationError("Неверный код")
-
         if otp.is_expired():
             raise serializers.ValidationError("Код просрочен")
-
         data["user"] = user
         data["otp"] = otp
         return data
@@ -70,7 +66,6 @@ class VerifyOTPSerializer(serializers.Serializer):
         return user
 
 
-# Повторная отправка OTP
 class ResendOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -87,16 +82,14 @@ class ResendOTPSerializer(serializers.Serializer):
     def save(self):
         user = self.validated_data["user"]
         otp = OTP.create_otp(user, purpose="registration")
-        return {"user": user, "otp": otp.code}
+        return {"user": user, "otp": otp}
 
 
-# Логин
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
 
-# Сброс пароля
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -111,7 +104,7 @@ class ResetPasswordSerializer(serializers.Serializer):
     def save(self):
         user = self.validated_data["user"]
         otp = OTP.create_otp(user, purpose="reset_password")
-        return {"user": user, "otp": otp.code}
+        return {"user": user, "otp": otp}
 
 
 class ResetPasswordConfirmSerializer(serializers.Serializer):
@@ -129,10 +122,7 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError("Пользователь не найден")
         try:
             otp = OTP.objects.filter(
-                user=user,
-                code=data["code"],
-                is_used=False,
-                purpose="reset_password"
+                user=user, code=data["code"], is_used=False, purpose="reset_password"
             ).latest("created_at")
         except OTP.DoesNotExist:
             raise serializers.ValidationError("Неверный код")
@@ -152,21 +142,18 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
         return user
 
 
-# Обновление профиля
 class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["first_name", "last_name", "phone_number"]
 
 
-# Пользователь
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "first_name", "last_name", "phone_number", "is_verified"]
 
 
-# Бонусы
 class UserBonusSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserBonus
@@ -179,12 +166,10 @@ class BonusTransactionSerializer(serializers.ModelSerializer):
         fields = ["id", "points", "transaction_type", "description", "qr_code", "created_at"]
 
 
-# Уведомления
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ["id", "message", "created_at", "is_read"]
-
 
 
 class DeliveryAddressSerializer(serializers.ModelSerializer):
@@ -198,4 +183,12 @@ class DeliveryAddressSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
+        if validated_data.get('is_default'):
+            DeliveryAddress.objects.filter(user=user, is_default=True).update(is_default=False)
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        user = self.context['request'].user
+        if validated_data.get('is_default'):
+            DeliveryAddress.objects.filter(user=user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
+        return super().update(instance, validated_data)

@@ -11,8 +11,16 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
+LANGUAGE_CODE = "ru-ru"
+TIME_ZONE = "Asia/Bishkek"
+USE_I18N = True
+USE_TZ = True
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 INSTALLED_APPS = [
     "jazzmin",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -21,7 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django_filters",
-    
+
     "leaflet",
     "rest_framework",
     "rest_framework.authtoken",
@@ -102,11 +110,6 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-LANGUAGE_CODE = "ru-ru"
-TIME_ZONE = "Asia/Bishkek"
-USE_I18N = True
-USE_TZ = True
-
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
@@ -130,22 +133,37 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     "show_ui_builder": True,
     "icons": {
+        # Приложение alma
         "alma.board": "dashboard",
         "alma.stock": "local_offer",
         "alma.story": "history",
         "alma.store": "store",
         "alma.hurrybuy": "flash_on",
+
+        # Приложение product
         "product.category_product": "category",
         "product.product": "inventory_2",
-        "product.cart": "shopping_cart",
-        "product.cartitem": "add_shopping_cart",
-        "product.address": "location_on",
-        "product.order": "receipt_long",
-        "product.orderitem": "inventory_2",
+
+        # Приложение shop
+        "shop.cart": "shopping_cart",
+        "shop.cartitem": "add_shopping_cart",
+        "shop.order": "receipt_long",
+        "shop.orderitem": "inventory_2",
+        "shop.address": "location_on",
+        "shop.deliveryregion": "place",
+
+        # Приложение user
+        "user.customuser": "person",
+        "user.otp": "vpn_key",
+        "user.userbonus": "star",
+        "user.bonustransaction": "monetization_on",
+        "user.notification": "notifications",
+        "user.deliveryaddress": "place"
     },
     "custom_css": None,
     "custom_js": None,
 }
+
 
 USE_CONSOLE_EMAIL = os.getenv("USE_CONSOLE_EMAIL", "True").lower() in ("true", "1", "t")
 
@@ -162,4 +180,3 @@ else:
     DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 CORS_ALLOW_ALL_ORIGINS = True
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

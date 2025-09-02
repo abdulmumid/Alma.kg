@@ -1,10 +1,11 @@
-# Product/models.py
 from django.db import models
 from django.utils.text import slugify
 from Alma.models import Store
 from django.conf import settings
 from User.models import UserBonus, BonusTransaction  # импортируем бонусы
 
+
+# 📌 Категория продукта
 class Category_Product(models.Model):
     name = models.CharField("Название", max_length=100)
     slug = models.SlugField("Slug", unique=True, blank=True)
@@ -23,8 +24,10 @@ class Category_Product(models.Model):
     class Meta:
         verbose_name = "Категория продукта"
         verbose_name_plural = "Категории продуктов"
+        ordering = ["name"]
 
 
+# 📌 Продукт
 class Product(models.Model):
     name = models.CharField("Название", max_length=255)
     category = models.ForeignKey(Category_Product, on_delete=models.CASCADE, verbose_name="Категория")
@@ -32,7 +35,7 @@ class Product(models.Model):
     discount = models.DecimalField("Скидка %", max_digits=5, decimal_places=2, blank=True, null=True)
     image = models.ImageField(upload_to='products/')
     barcode = models.CharField("Штрихкод", max_length=100, unique=True)
-    bonus_points = models.PositiveIntegerField("Бонусы за покупку", default=0)  # добавили поле бонусов
+    bonus_points = models.PositiveIntegerField("Бонусы за покупку", default=0)
     is_featured = models.BooleanField("Избранное", default=False)
     store = models.ForeignKey(Store, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Магазин")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -50,7 +53,9 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
+        ordering = ["name"]
 
+    # ⚡ Начисление бонусов пользователю за покупку продукта
     def award_bonus_to_user(self, user):
         if self.bonus_points > 0:
             user_bonus, created = UserBonus.objects.get_or_create(user=user)
