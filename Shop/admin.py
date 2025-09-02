@@ -22,7 +22,7 @@ class OrderAdmin(admin.ModelAdmin):
     icon_name = "shopping_cart"
     list_display = ("id", "user", "address", "total_price", "status", "created_at")
     list_filter = ("status", "created_at")
-    search_fields = ("user__email", "address__id")  # Если у адреса нет поля street, используем id или изменяем на корректное
+    search_fields = ("user__email", "address__id") 
 
 
 @admin.register(DeliveryRegion)
