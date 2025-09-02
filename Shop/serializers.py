@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Cart, CartItem, Order, DeliveryRegion
 
 
+# 🔹 Сериализатор элемента корзины
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     final_price = serializers.DecimalField(source="get_total_price", max_digits=10, decimal_places=2, read_only=True)
@@ -11,18 +12,21 @@ class CartItemSerializer(serializers.ModelSerializer):
         fields = ["id", "product", "product_name", "quantity", "final_price"]
 
 
+# 🔹 Сериализатор корзины
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
-    total_price = serializers.DecimalField(source="get_total_price", max_digits=10, decimal_places=2, read_only=True)
+    total_price = serializers.DecimalField(source="total_price", max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = Cart
         fields = ["id", "user", "items", "total_price", "is_active"]
 
 
+# 🔹 Сериализатор заказа
 class OrderSerializer(serializers.ModelSerializer):
     cart = serializers.PrimaryKeyRelatedField(queryset=Cart.objects.filter(is_active=True))
     items = CartItemSerializer(source="cart.items", many=True, read_only=True)
+    total_price = serializers.DecimalField(source="total_price", max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = Order
@@ -41,12 +45,12 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         order = super().create(validated_data)
-        order.calculate_total_price()  # пересчёт суммы заказа
-        order.apply_bonuses()          # списание бонусов
-        order.award_bonuses()          # начисление бонусов
+        order.apply_bonuses()      # списываем бонусы
+        order.award_bonuses()      # начисляем бонусы
         return order
 
 
+# 🔹 Сериализатор регионов доставки
 class DeliveryRegionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryRegion

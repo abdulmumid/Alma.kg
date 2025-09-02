@@ -3,9 +3,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from Product.models import Product
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
 
 User = settings.AUTH_USER_MODEL
 
@@ -23,8 +20,11 @@ class Cart(models.Model):
     def __str__(self):
         return f"Корзина {self.user} ({'активная' if self.is_active else 'закрыта'})"
 
-    def get_total_price(self):
+    @property
+    def total_price(self):
+        """Сумма корзины считается автоматически."""
         return sum(item.get_total_price() for item in self.items.all())
+
 
 # 🛍️ Элемент корзины
 class CartItem(models.Model):
@@ -41,6 +41,7 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} × {self.quantity}"
+
 
 # 🧾 Заказ
 class Order(gis_models.Model):
@@ -66,46 +67,28 @@ class Order(gis_models.Model):
     def __str__(self):
         return f"Заказ №{self.id} — {self.user}"
 
-    def calculate_total_price(self):
-        total = self.cart.get_total_price()
-        if self.used_bonus_points:
-            total -= self.used_bonus_points
-            total = max(total, 0)
-        self.total_price = total
-        self.save()
+    def save(self, *args, **kwargs):
+        """Автоматический расчёт total_price при сохранении."""
+        if self.cart:
+            total = self.cart.total_price
+            if self.used_bonus_points:
+                total -= self.used_bonus_points
+                total = max(total, 0)
+            self.total_price = total
+        super().save(*args, **kwargs)
 
     def apply_bonuses(self):
+        """Списание бонусов пользователя при оплате заказа."""
         user_bonus = getattr(self.user, "bonus", None)
         if user_bonus and self.used_bonus_points > 0:
             user_bonus.spend_points(points=self.used_bonus_points, description=f"Оплата заказа №{self.id}")
 
     def award_bonuses(self):
+        """Начисление бонусов за покупку."""
         for item in self.cart.items.all():
             if hasattr(item.product, "award_bonus_to_user"):
                 item.product.award_bonus_to_user(self.user)
 
-# ✉️ Сигнал: отправка email при создании заказа
-@receiver(post_save, sender=Order)
-def send_order_email(sender, instance, created, **kwargs):
-    if created:
-        order = instance
-        items_text = "\n".join([
-            f"{item.product.name} — {item.quantity} шт. × {item.product.final_price:.2f} = {item.get_total_price():.2f}"
-            for item in order.cart.items.all()
-        ])
-        message = (
-            f"Новый заказ от {order.user.first_name} {order.user.last_name} ({order.user.email})\n"
-            f"Адрес доставки: {order.address}\n"
-            f"Товары:\n{items_text}\n"
-            f"Итого: {order.total_price:.2f} сом"
-        )
-        send_mail(
-            subject=f"Новый заказ №{order.id}",
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=["developerpythonman@gmail.com"],
-            fail_silently=False,
-        )
 
 # 🌍 Регион доставки
 class DeliveryRegion(models.Model):
