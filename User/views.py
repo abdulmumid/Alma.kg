@@ -108,15 +108,19 @@ class ResetPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()  # {'user': user, 'otp': otp}
-        user = result['user']
-        otp = result['otp']
+        
+        user = serializer.save()  
+        
+        otp = OTP.objects.filter(user=user, purpose="reset_password").order_by("-created_at").first()
+        
         send_user_mail(
             "Код для сброса пароля",
             f"Ваш код для сброса пароля: {otp.code}. Никому не передавайте этот код.",
             user.email
         )
         return Response({"message": "Код для сброса пароля отправлен на email"}, status=status.HTTP_200_OK)
+
+
 
 # Подтверждение нового пароля
 class ResetPasswordConfirmView(generics.GenericAPIView):

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from xml.etree.ElementInclude import include
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -116,6 +117,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {"default": {"toolbar": "full", "height": 300, "width": "100%"}}
 
+
 JAZZMIN_SETTINGS = {
     "site_title": "My Project Admin",
     "site_header": "My Project",
@@ -170,3 +172,4 @@ else:
     DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 CORS_ALLOW_ALL_ORIGINS = True
+
