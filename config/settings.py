@@ -173,3 +173,6 @@ else:
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+
+ONESIGNAL_APP_ID = "4ba04319-622f-42cd-bfeb-01ca69d7c9d8"
+ONESIGNAL_API_KEY = "os_v2_app_joqegglcf5bm3p7lahfgtv6j3dzgyaqkvyqepluk6lekwm3idp2vi77hv5wdmmk75olna6cfza3dftdvfrnjxfxwwobwc44cgqukdui"

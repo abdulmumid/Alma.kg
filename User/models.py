@@ -46,6 +46,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(_("Персонал"), default=False)
     is_verified = models.BooleanField(_("Подтверждён"), default=False)
     date_joined = models.DateTimeField(_("Дата регистрации"), default=timezone.now)
+    player_id = models.CharField(max_length=200, blank=True, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
@@ -185,6 +186,12 @@ class Notification(models.Model):
     def mark_as_read(self):
         self.is_read = True
         self.save()
+
+    def save(self, *args, **kwargs):
+        from .utils import send_push_notification
+        super().save(*args, **kwargs)
+        if not self.is_read and getattr(self.user, "player_id", None):
+            send_push_notification(self.user, str(self.message))
 
 
 class DeliveryAddress(gis_models.Model):

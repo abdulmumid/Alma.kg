@@ -8,10 +8,11 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+    player_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password", "confirm_password"]
+        fields = ["email", "first_name", "last_name", "password", "confirm_password", "player_id"]
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -25,13 +26,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("confirm_password")
+        player_id = validated_data.pop("player_id", None)
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
             first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", "")
+            last_name=validated_data.get("last_name", ""),
+            player_id=player_id
         )
-        # создаём OTP, но возвращаем только user (иначе ошибка)
         OTP.create_otp(user, purpose="registration")
         return user
 
@@ -93,6 +95,25 @@ class ResendOTPSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    player_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(email=data["email"])
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Пользователь не найден")
+
+        if not user.check_password(data["password"]):
+            raise serializers.ValidationError("Неверный пароль")
+
+        # Обновляем player_id при логине
+        player_id = data.get("player_id")
+        if player_id and user.player_id != player_id:
+            user.player_id = player_id
+            user.save(update_fields=["player_id"])
+
+        data["user"] = user
+        return data
 
 
 class ResetPasswordSerializer(serializers.Serializer):
@@ -153,13 +174,13 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
 class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "phone_number"]
+        fields = ["first_name", "last_name", "phone_number", "player_id"]
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "phone_number", "is_verified"]
+        fields = ["id", "email", "first_name", "last_name", "phone_number", "is_verified", "player_id"]
 
 
 class UserBonusSerializer(serializers.ModelSerializer):
@@ -175,9 +196,11 @@ class BonusTransactionSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    user_id = serializers.ReadOnlyField(source='user.id')
+
     class Meta:
         model = Notification
-        fields = ["id", "message", "created_at", "is_read"]
+        fields = ["id", "user_id", "message", "created_at", "is_read"]
 
 
 class DeliveryAddressSerializer(serializers.ModelSerializer):

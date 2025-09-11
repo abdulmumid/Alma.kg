@@ -3,14 +3,6 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.safestring import mark_safe
 from .models import CustomUser, OTP, UserBonus, BonusTransaction, Notification, DeliveryAddress
 
-class ImagePreviewMixin:
-    @admin.display(description='Изображение')
-    def image_preview(self, obj):
-        if hasattr(obj, 'image') and obj.image:
-            return mark_safe(f'<img src="{obj.image.url}" style="max-height:100px; max-width:100px;" />')
-        return 'Нет изображения'
-
-
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     icon_name = "person"
@@ -32,7 +24,6 @@ class CustomUserAdmin(UserAdmin):
         ),
     )
 
-
 @admin.register(OTP)
 class OTPAdmin(admin.ModelAdmin):
     icon_name = "vpn_key"
@@ -45,14 +36,12 @@ class OTPAdmin(admin.ModelAdmin):
     def expires_at_display(self, obj):
         return obj.expires_at
 
-
 @admin.register(UserBonus)
 class UserBonusAdmin(admin.ModelAdmin):
     icon_name = "star"
     list_display = ('user', 'total_points', 'available_points')
     search_fields = ('user__email', 'user__phone_number')
     readonly_fields = ('total_points', 'available_points')
-
 
 @admin.register(BonusTransaction)
 class BonusTransactionAdmin(admin.ModelAdmin):
@@ -61,7 +50,6 @@ class BonusTransactionAdmin(admin.ModelAdmin):
     list_filter = ('transaction_type', 'created_at')
     search_fields = ('user__email', 'description', 'qr_code')
     readonly_fields = ('user', 'points', 'transaction_type', 'description', 'qr_code', 'created_at')
-
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
@@ -81,15 +69,14 @@ class NotificationAdmin(admin.ModelAdmin):
         if not queryset.exists():
             self.message_user(request, "Нет выбранных уведомлений для отправки.", level=messages.WARNING)
             return
-        users = list(CustomUser.objects.only('id'))
+        users = CustomUser.objects.filter(is_active=True)
         notifications = [Notification(user=user, message=obj.message) for obj in queryset for user in users]
         Notification.objects.bulk_create(notifications, batch_size=500)
         self.message_user(
             request,
-            f"Отправлено {len(notifications)} уведомлений ({len(users)} пользователям).",
+            f"Отправлено {len(notifications)} уведомлений ({users.count()} пользователям).",
             level=messages.SUCCESS
         )
-
 
 @admin.register(DeliveryAddress)
 class DeliveryAddressAdmin(admin.ModelAdmin):
