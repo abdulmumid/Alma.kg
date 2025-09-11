@@ -5,14 +5,14 @@ from .models import OTP, Notification, UserBonus, BonusTransaction, DeliveryAddr
 User = get_user_model()
 
 
+# --- Регистрация ---
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
-    player_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password", "confirm_password", "player_id"]
+        fields = ["email", "first_name", "last_name", "password", "confirm_password"]
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -26,18 +26,17 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("confirm_password")
-        player_id = validated_data.pop("player_id", None)
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
             first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-            player_id=player_id
+            last_name=validated_data.get("last_name", "")
         )
         OTP.create_otp(user, purpose="registration")
         return user
 
 
+# --- Подтверждение OTP ---
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
@@ -71,6 +70,7 @@ class VerifyOTPSerializer(serializers.Serializer):
         return user
 
 
+# --- Повторная отправка OTP ---
 class ResendOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -92,10 +92,10 @@ class ResendOTPSerializer(serializers.Serializer):
         return {"user": user, "otp": otp}
 
 
+# --- Логин ---
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-    player_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, data):
         try:
@@ -106,16 +106,18 @@ class LoginSerializer(serializers.Serializer):
         if not user.check_password(data["password"]):
             raise serializers.ValidationError("Неверный пароль")
 
-        # Обновляем player_id при логине
-        player_id = data.get("player_id")
-        if player_id and user.player_id != player_id:
-            user.player_id = player_id
-            user.save(update_fields=["player_id"])
-
         data["user"] = user
         return data
 
 
+# --- Обновление player_id (OneSignal) ---
+class PlayerIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["player_id"]
+
+
+# --- Сброс пароля ---
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -171,18 +173,21 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
         return user
 
 
+# --- Обновление профиля ---
 class UpdateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "phone_number", "player_id"]
+        fields = ["first_name", "last_name", "phone_number"]
 
 
+# --- Пользователь ---
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "first_name", "last_name", "phone_number", "is_verified", "player_id"]
 
 
+# --- Бонусы ---
 class UserBonusSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserBonus
@@ -195,6 +200,7 @@ class BonusTransactionSerializer(serializers.ModelSerializer):
         fields = ["id", "points", "transaction_type", "description", "qr_code", "created_at"]
 
 
+# --- Уведомления ---
 class NotificationSerializer(serializers.ModelSerializer):
     user_id = serializers.ReadOnlyField(source='user.id')
 
@@ -203,6 +209,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ["id", "user_id", "message", "created_at", "is_read"]
 
 
+# --- Адрес доставки ---
 class DeliveryAddressSerializer(serializers.ModelSerializer):
     region_name = serializers.ReadOnlyField(source='region.name')
 

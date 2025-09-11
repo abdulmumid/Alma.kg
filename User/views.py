@@ -10,13 +10,16 @@ from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, ResendOTPSerializer,
     LoginSerializer, ResetPasswordSerializer, ResetPasswordConfirmSerializer,
     UpdateUserSerializer, NotificationSerializer, UserBonusSerializer,
-    BonusTransactionSerializer, DeliveryAddressSerializer
+    BonusTransactionSerializer, DeliveryAddressSerializer, UserSerializer,
+    PlayerIdSerializer
 )
 from .permissions import IsEmailVerified
+
 
 def send_user_mail(subject, message, recipient):
     if recipient:
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient])
+
 
 # ------------------- Регистрация -------------------
 class RegisterView(generics.CreateAPIView):
@@ -40,6 +43,7 @@ class RegisterView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED
         )
 
+
 # ------------------- Подтверждение OTP -------------------
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = VerifyOTPSerializer
@@ -56,6 +60,7 @@ class VerifyOTPView(generics.GenericAPIView):
             "refresh": str(refresh)
         }, status=status.HTTP_200_OK)
 
+
 # ------------------- Повторная отправка OTP -------------------
 class ResendOTPView(generics.GenericAPIView):
     serializer_class = ResendOTPSerializer
@@ -64,7 +69,7 @@ class ResendOTPView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save()  # {'user': user, 'otp': otp}
+        result = serializer.save()
         user = result['user']
         otp = result['otp']
         send_user_mail(
@@ -73,6 +78,7 @@ class ResendOTPView(generics.GenericAPIView):
             user.email
         )
         return Response({"message": "Новый код отправлен на email"}, status=status.HTTP_200_OK)
+
 
 # ------------------- Вход -------------------
 class LoginView(generics.GenericAPIView):
@@ -93,18 +99,22 @@ class LoginView(generics.GenericAPIView):
         if not user.is_verified:
             return Response({"error": "Подтвердите email перед входом"}, status=status.HTTP_403_FORBIDDEN)
 
-        # Обновляем player_id, если передан
-        player_id = serializer.validated_data.get("player_id")
-        if player_id and user.player_id != player_id:
-            user.player_id = player_id
-            user.save(update_fields=["player_id"])
-
         refresh = RefreshToken.for_user(user)
         return Response({
             "message": "Успешный вход",
             "access": str(refresh.access_token),
             "refresh": str(refresh)
         }, status=status.HTTP_200_OK)
+
+
+# ------------------- Обновление player_id -------------------
+class UpdatePlayerIdView(generics.UpdateAPIView):
+    serializer_class = PlayerIdSerializer
+    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
+
+    def get_object(self):
+        return self.request.user
+
 
 # ------------------- Сброс пароля -------------------
 class ResetPasswordView(generics.GenericAPIView):
@@ -114,7 +124,7 @@ class ResetPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()  # создаёт OTP
+        user = serializer.save()
 
         otp = OTP.objects.filter(user=user, purpose="reset_password").order_by("-created_at").first()
         send_user_mail(
@@ -123,6 +133,7 @@ class ResetPasswordView(generics.GenericAPIView):
             user.email
         )
         return Response({"message": "Код для сброса пароля отправлен на email"}, status=status.HTTP_200_OK)
+
 
 # ------------------- Подтверждение нового пароля -------------------
 class ResetPasswordConfirmView(generics.GenericAPIView):
@@ -135,13 +146,15 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
         serializer.save()
         return Response({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
 
+
 # ------------------- Профиль пользователя -------------------
 class UserMeView(generics.RetrieveAPIView):
-    serializer_class = UpdateUserSerializer
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def get_object(self):
         return self.request.user
+
 
 class UserUpdateProfileView(generics.UpdateAPIView):
     serializer_class = UpdateUserSerializer
@@ -149,6 +162,7 @@ class UserUpdateProfileView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
 
 class UserDeleteAccountView(generics.DestroyAPIView):
     serializer_class = UpdateUserSerializer
@@ -165,6 +179,7 @@ class UserDeleteAccountView(generics.DestroyAPIView):
             DeliveryAddress.objects.filter(user=instance).delete()
             instance.delete()
 
+
 # ------------------- Бонусы -------------------
 class UserBonusView(generics.RetrieveAPIView):
     serializer_class = UserBonusSerializer
@@ -174,12 +189,14 @@ class UserBonusView(generics.RetrieveAPIView):
         bonus, _ = UserBonus.objects.get_or_create(user=self.request.user)
         return bonus
 
+
 class BonusTransactionListView(generics.ListAPIView):
     serializer_class = BonusTransactionSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def get_queryset(self):
         return BonusTransaction.objects.filter(user=self.request.user).order_by("-created_at")
+
 
 # ------------------- Уведомления -------------------
 class NotificationListCreateView(generics.ListCreateAPIView):
@@ -190,7 +207,8 @@ class NotificationListCreateView(generics.ListCreateAPIView):
         return Notification.objects.filter(user=self.request.user).order_by("-created_at")
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # пуш отправится через Notification.save()
+        serializer.save(user=self.request.user)
+
 
 class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NotificationSerializer
@@ -198,6 +216,7 @@ class NotificationRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
+
 
 # ------------------- Адреса доставки -------------------
 class DeliveryAddressViewSet(viewsets.ModelViewSet):

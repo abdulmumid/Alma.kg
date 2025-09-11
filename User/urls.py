@@ -10,25 +10,25 @@ from .views import (
 
 # Router для DeliveryAddress
 router = DefaultRouter()
-router.register(r'addresses', DeliveryAddressViewSet, basename='addresses')
+router.register("addresses", DeliveryAddressViewSet, basename="addresses")
 
 urlpatterns = [
     # --- Auth endpoints ---
-    path("auth/register/", RegisterView.as_view(), name="register"),
-    path("auth/verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
-    path("auth/resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
-    path("auth/login/", LoginView.as_view(), name="login"),
-    path("auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
-    path("auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="reset-password-confirm"),
+    path("auth/register/", RegisterView.as_view(), name="auth-register"),
+    path("auth/verify-otp/", VerifyOTPView.as_view(), name="auth-verify-otp"),
+    path("auth/resend-otp/", ResendOTPView.as_view(), name="auth-resend-otp"),
+    path("auth/login/", LoginView.as_view(), name="auth-login"),
+    path("auth/reset-password/", ResetPasswordView.as_view(), name="auth-reset-password"),
+    path("auth/reset-password-confirm/", ResetPasswordConfirmView.as_view(), name="auth-reset-password-confirm"),
 
     # --- User endpoints ---
     path("user/me/", UserMeView.as_view(), name="user-me"),
-    path("user/update-profile/", UserUpdateProfileView.as_view(), name="update-profile"),
-    path("user/delete-account/", UserDeleteAccountView.as_view(), name="delete-account"),
+    path("user/update-profile/", UserUpdateProfileView.as_view(), name="user-update-profile"),
+    path("user/delete-account/", UserDeleteAccountView.as_view(), name="user-delete-account"),
 
     # --- User Bonus endpoints ---
     path("user/bonus/", UserBonusView.as_view(), name="user-bonus"),
-    path("user/bonus/transactions/", BonusTransactionListView.as_view(), name="bonus-transactions"),
+    path("user/bonus/transactions/", BonusTransactionListView.as_view(), name="user-bonus-transactions"),
 
     # --- Notifications endpoints ---
     path("notifications/", NotificationListCreateView.as_view(), name="notifications-list-create"),
