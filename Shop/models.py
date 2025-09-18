@@ -1,12 +1,13 @@
-from django.contrib.gis.db import models as gis_models
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.contrib.gis.db import models as gis_models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from Product.models import Product
+from User.models import UserBonus, BonusTransaction, DeliveryAddress
 
 User = settings.AUTH_USER_MODEL
 
-# 🛒 Корзина
+# ================= Корзина =================
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="carts", verbose_name=_("Пользователь"))
     created_at = models.DateTimeField(_("Дата создания"), auto_now_add=True)
@@ -16,17 +17,24 @@ class Cart(models.Model):
     class Meta:
         verbose_name = _("Корзина")
         verbose_name_plural = _("Корзины")
+        constraints = [
+            models.UniqueConstraint(fields=['user'], condition=models.Q(is_active=True), name='unique_active_cart_per_user')
+        ]
 
     def __str__(self):
         return f"Корзина {self.user} ({'активная' if self.is_active else 'закрыта'})"
 
     @property
     def total_price(self):
-        """Сумма корзины считается автоматически."""
         return sum(item.get_total_price() for item in self.items.all())
 
+    @classmethod
+    def get_or_create_cart(cls, user):
+        cart, created = cls.objects.get_or_create(user=user, is_active=True)
+        return cart
 
-# 🛍️ Элемент корзины
+
+# ================= Элемент корзины =================
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items", verbose_name=_("Корзина"))
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name=_("Продукт"))
@@ -43,7 +51,19 @@ class CartItem(models.Model):
         return f"{self.product.name} × {self.quantity}"
 
 
-# 🧾 Заказ
+# ================= Регион доставки =================
+class DeliveryRegion(models.Model):
+    name = models.CharField(_("Регион"), max_length=100, unique=True)
+
+    class Meta:
+        verbose_name = _("Регион доставки")
+        verbose_name_plural = _("Регионы доставки")
+
+    def __str__(self):
+        return self.name
+
+
+# ================= Заказ =================
 class Order(gis_models.Model):
     STATUS_CHOICES = (
         ("pending", _("В обработке")),
@@ -54,7 +74,7 @@ class Order(gis_models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders", verbose_name=_("Пользователь"))
     cart = models.OneToOneField(Cart, on_delete=models.CASCADE, related_name="order", verbose_name=_("Корзина"))
-    address = models.ForeignKey("User.DeliveryAddress", on_delete=models.CASCADE, verbose_name=_("Адрес доставки"))
+    address = models.ForeignKey(DeliveryAddress, on_delete=models.CASCADE, verbose_name=_("Адрес доставки"))
     total_price = models.DecimalField(_("Сумма заказа"), max_digits=10, decimal_places=2, default=0)
     used_bonus_points = models.PositiveIntegerField(_("Использованные бонусы"), default=0)
     status = models.CharField(_("Статус"), max_length=20, choices=STATUS_CHOICES, default="pending")
@@ -68,35 +88,29 @@ class Order(gis_models.Model):
         return f"Заказ №{self.id} — {self.user}"
 
     def save(self, *args, **kwargs):
-        """Автоматический расчёт total_price при сохранении."""
+        is_new_order = self.pk is None
+
         if self.cart:
             total = self.cart.total_price
-            if self.used_bonus_points:
-                total -= self.used_bonus_points
-                total = max(total, 0)
-            self.total_price = total
+
+            # Списание бонусов
+            if self.used_bonus_points > 0:
+                bonus_obj = getattr(self.user, "bonus", None)
+                if bonus_obj:
+                    points_to_use = min(self.used_bonus_points, bonus_obj.total_points)
+                    bonus_obj.spend_points(points_to_use, description=f"Списание при оплате заказа №{self.id}")
+                    total -= points_to_use
+
+            self.total_price = max(total, 0)
+
         super().save(*args, **kwargs)
 
-    def apply_bonuses(self):
-        """Списание бонусов пользователя при оплате заказа."""
-        user_bonus = getattr(self.user, "bonus", None)
-        if user_bonus and self.used_bonus_points > 0:
-            user_bonus.spend_points(points=self.used_bonus_points, description=f"Оплата заказа №{self.id}")
+        # После оформления заказа: закрываем корзину и очищаем товары
+        if is_new_order and self.cart:
+            self.cart.is_active = False
+            self.cart.save()
+            self.cart.items.all().delete()
 
-    def award_bonuses(self):
-        """Начисление бонусов за покупку."""
-        for item in self.cart.items.all():
-            if hasattr(item.product, "award_bonus_to_user"):
+            # Начисляем бонусы за каждый продукт
+            for item in self.cart.items.all():
                 item.product.award_bonus_to_user(self.user)
-
-
-# 🌍 Регион доставки
-class DeliveryRegion(models.Model):
-    name = models.CharField(_("Регион"), max_length=100, unique=True)
-
-    class Meta:
-        verbose_name = _("Регион доставки")
-        verbose_name_plural = _("Регионы доставки")
-
-    def __str__(self):
-        return self.name
