@@ -3,8 +3,10 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from Product.models import Product
 from User.models import DeliveryAddress, UserBonus
+from choices import STATUS_CHOICES
 
 User = settings.AUTH_USER_MODEL
+
 
 class Store(models.Model):
     owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name="store", verbose_name=_("Владелец"))
@@ -48,13 +50,11 @@ class Cart(models.Model):
 
     @property
     def total_price(self):
-        return sum(item.get_total_price() for item in self.items.all())
+        return sum(item.get_total_price() for item in self.items.select_related("product").all())
 
     @classmethod
     def get_or_create_cart(cls, user):
-        cart = cls.objects.filter(user=user, is_active=True).first()
-        if not cart:
-            cart = cls.objects.create(user=user)
+        cart, created = cls.objects.get_or_create(user=user, is_active=True)
         return cart
 
 
@@ -75,13 +75,6 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
-    STATUS_CHOICES = (
-        ("pending", _("В обработке")),
-        ("confirmed", _("Подтвержден")),
-        ("delivered", _("Доставлен")),
-        ("canceled", _("Отменен")),
-    )
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders", verbose_name=_("Пользователь"))
     cart = models.OneToOneField(Cart, on_delete=models.CASCADE, related_name="order", verbose_name=_("Корзина"))
     address = models.ForeignKey(DeliveryAddress, on_delete=models.CASCADE, verbose_name=_("Адрес доставки"))
@@ -100,10 +93,13 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 
+        # Сначала сохраняем заказ, чтобы появился self.id
+        super().save(*args, **kwargs)
+
         if self.cart:
             total = self.cart.total_price
 
-            # Списание бонусов
+            # Списание бонусов после сохранения заказа
             if self.used_bonus_points > 0:
                 bonus_obj, _ = UserBonus.objects.get_or_create(user=self.user)
                 points_to_use = min(self.used_bonus_points, bonus_obj.total_points)
@@ -111,15 +107,16 @@ class Order(models.Model):
                     bonus_obj.spend_points(points_to_use, description=f"Списание при заказе №{self.id}")
                     total -= points_to_use
 
-            self.total_price = max(total, 0)
-
-        super().save(*args, **kwargs)
+            # Обновляем total_price уже с учётом бонусов
+            if self.total_price != max(total, 0):
+                self.total_price = max(total, 0)
+                super().save(update_fields=["total_price"])
 
         if is_new and self.cart:
             # Начисляем бонусы за каждый товар
-            for item in self.cart.items.all():
+            for item in self.cart.items.select_related("product").all():
                 item.product.award_bonus_to_user(self.user)
 
             # Закрываем корзину
             self.cart.is_active = False
-            self.cart.save()
+            self.cart.save(update_fields=["is_active"])
