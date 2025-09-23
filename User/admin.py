@@ -1,6 +1,5 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from django.utils.safestring import mark_safe
 from .models import CustomUser, OTP, UserBonus, BonusTransaction, Notification, DeliveryAddress
 
 @admin.register(CustomUser)
@@ -11,6 +10,7 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_verified', 'is_active')
     search_fields = ('email', 'first_name', 'last_name', 'phone_number')
     ordering = ('email',)
+    readonly_fields = ('date_joined', 'last_login')
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Личная информация', {'fields': ('first_name', 'last_name', 'phone_number')}),
@@ -24,6 +24,7 @@ class CustomUserAdmin(UserAdmin):
         ),
     )
 
+
 @admin.register(OTP)
 class OTPAdmin(admin.ModelAdmin):
     icon_name = "vpn_key"
@@ -36,20 +37,23 @@ class OTPAdmin(admin.ModelAdmin):
     def expires_at_display(self, obj):
         return obj.expires_at
 
+
 @admin.register(UserBonus)
 class UserBonusAdmin(admin.ModelAdmin):
     icon_name = "star"
-    list_display = ('user', 'total_points', 'available_points')
+    list_display = ('user', 'total_points')
     search_fields = ('user__email', 'user__phone_number')
-    readonly_fields = ('total_points', 'available_points')
+    readonly_fields = ('total_points',)
+
 
 @admin.register(BonusTransaction)
 class BonusTransactionAdmin(admin.ModelAdmin):
     icon_name = "monetization_on"
-    list_display = ('user', 'points', 'transaction_type', 'description', 'qr_code', 'created_at')
+    list_display = ('user', 'points', 'transaction_type', 'description', 'created_at')
     list_filter = ('transaction_type', 'created_at')
-    search_fields = ('user__email', 'description', 'qr_code')
-    readonly_fields = ('user', 'points', 'transaction_type', 'description', 'qr_code', 'created_at')
+    search_fields = ('user__email', 'description')
+    readonly_fields = ('user', 'points', 'transaction_type', 'description', 'created_at')
+
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
@@ -78,12 +82,13 @@ class NotificationAdmin(admin.ModelAdmin):
             level=messages.SUCCESS
         )
 
+
 @admin.register(DeliveryAddress)
 class DeliveryAddressAdmin(admin.ModelAdmin):
     icon_name = "place"
-    list_display = ('user', 'full_address_display', 'region', 'is_default')
-    list_filter = ('region', 'is_default')
-    search_fields = ('user__email', 'street', 'house', 'region__name')
+    list_display = ('user', 'full_address_display', 'is_default')
+    list_filter = ('is_default',)
+    search_fields = ('user__email', 'street', 'house')
     ordering = ('user',)
 
     @admin.display(description="Адрес")

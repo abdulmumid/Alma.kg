@@ -1,13 +1,15 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-from xml.etree.ElementInclude import include
 from dotenv import load_dotenv
 
+# --- Загружаем .env ---
 load_dotenv()
 
+# --- Пути ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --- Django ---
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
@@ -16,9 +18,9 @@ LANGUAGE_CODE = "ru-ru"
 TIME_ZONE = "Asia/Bishkek"
 USE_I18N = True
 USE_TZ = True
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# --- Приложения ---
 INSTALLED_APPS = [
     "jazzmin",
     "django.contrib.admin",
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
     "Shop",
 ]
 
+# --- Middleware ---
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -59,6 +62,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
+# --- База данных (PostgreSQL + PostGIS) ---
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -70,6 +74,7 @@ DATABASES = {
     }
 }
 
+# --- Шаблоны ---
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -86,7 +91,10 @@ TEMPLATES = [
     },
 ]
 
+# --- Пользовательская модель ---
 AUTH_USER_MODEL = "User.CustomUser"
+
+# --- Валидаторы пароля ---
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -94,6 +102,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# --- DRF ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -109,55 +118,18 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+# --- Статика и медиа ---
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# --- CKEditor ---
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {"default": {"toolbar": "full", "height": 300, "width": "100%"}}
 
-
-JAZZMIN_SETTINGS = {
-    "site_title": "My Project Admin",
-    "site_header": "My Project",
-    "site_brand": "My Project",
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "show_ui_builder": True,
-    "icons": {
-        # Приложение alma
-        "alma.board": "dashboard",
-        "alma.stock": "local_offer",
-        "alma.story": "history",
-        "alma.store": "store",
-        "alma.hurrybuy": "flash_on",
-
-        # Приложение product
-        "product.category_product": "category",
-        "product.product": "inventory_2",
-
-        # Приложение shop
-        "shop.cart": "shopping_cart",
-        "shop.cartitem": "add_shopping_cart",
-        "shop.order": "receipt_long",
-        "shop.orderitem": "inventory_2",
-        "shop.address": "location_on",
-        "shop.deliveryregion": "place",
-
-        # Приложение user
-        "user.customuser": "person",
-        "user.otp": "vpn_key",
-        "user.userbonus": "star",
-        "user.bonustransaction": "monetization_on",
-        "user.notification": "notifications",
-        "user.deliveryaddress": "place"
-    },
-    "custom_css": None,
-    "custom_js": None,
-}
-
-USE_CONSOLE_EMAIL = os.getenv("USE_CONSOLE_EMAIL", "True").lower() in ("true", "1", "t")
+# --- Email ---
+USE_CONSOLE_EMAIL = os.getenv("USE_CONSOLE_EMAIL", "False").lower() in ("true", "1", "t")
 
 if USE_CONSOLE_EMAIL:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -171,8 +143,9 @@ else:
     EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
     DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
+# --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = True
 
-
-ONESIGNAL_APP_ID = "4ba04319-622f-42cd-bfeb-01ca69d7c9d8"
-ONESIGNAL_API_KEY = "os_v2_app_joqegglcf5bm3p7lahfgtv6j3dzgyaqkvyqepluk6lekwm3idp2vi77hv5wdmmk75olna6cfza3dftdvfrnjxfxwwobwc44cgqukdui"
+# --- OneSignal ---
+ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
+ONESIGNAL_API_KEY = os.getenv("ONESIGNAL_API_KEY")

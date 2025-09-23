@@ -16,9 +16,18 @@ from .serializers import (
 from .permissions import IsEmailVerified
 
 
+# ------------------- Отправка писем -------------------
 def send_user_mail(subject, message, recipient):
     if recipient:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient])
+        backend = None if not getattr(settings, 'USE_CONSOLE_EMAIL', True) else 'django.core.mail.backends.console.EmailBackend'
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+            fail_silently=False,
+            connection=None
+        )
 
 
 # ------------------- Регистрация -------------------
@@ -32,11 +41,12 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
 
         otp = OTP.objects.filter(user=user, purpose="registration").order_by("-created_at").first()
-        send_user_mail(
-            "Ваш код подтверждения",
-            f"Ваш код подтверждения: {otp.code}. Никому не передавайте этот код.",
-            user.email
-        )
+        if otp:
+            send_user_mail(
+                "Ваш код подтверждения",
+                f"Ваш код подтверждения: {otp.code}. Никому не передавайте этот код.",
+                user.email
+            )
 
         return Response(
             {"message": "Регистрация успешна! Проверьте email для подтверждения.", "email": user.email},
@@ -127,11 +137,12 @@ class ResetPasswordView(generics.GenericAPIView):
         user = serializer.save()
 
         otp = OTP.objects.filter(user=user, purpose="reset_password").order_by("-created_at").first()
-        send_user_mail(
-            "Код для сброса пароля",
-            f"Ваш код для сброса пароля: {otp.code}. Никому не передавайте этот код.",
-            user.email
-        )
+        if otp:
+            send_user_mail(
+                "Код для сброса пароля",
+                f"Ваш код для сброса пароля: {otp.code}. Никому не передавайте этот код.",
+                user.email
+            )
         return Response({"message": "Код для сброса пароля отправлен на email"}, status=status.HTTP_200_OK)
 
 
