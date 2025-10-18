@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 from Alma.models import Store
 from django.conf import settings
-from User.models import UserBonus, BonusTransaction  # импортируем бонусы
+from User.models import UserBonus, BonusTransaction  
 
 
 # 📌 Категория продукта
@@ -55,7 +55,6 @@ class Product(models.Model):
         verbose_name_plural = "Продукты"
         ordering = ["name"]
 
-    # ⚡ Начисление бонусов пользователю за покупку продукта
     def award_bonus_to_user(self, user):
         if self.bonus_points > 0:
             user_bonus, created = UserBonus.objects.get_or_create(user=user)

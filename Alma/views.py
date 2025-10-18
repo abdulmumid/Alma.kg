@@ -12,6 +12,7 @@ class BoardViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 class StoreListView(generics.ListAPIView):
+    queryset = Store.objects.all()
     serializer_class = StoreSerializer
     permission_classes = [permissions.AllowAny]
 
